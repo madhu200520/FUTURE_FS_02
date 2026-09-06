@@ -314,7 +314,7 @@ function Login({ onLogin, onPublicSite }) {
           <button className="primary-button full" onClick={submit}>
             Sign in <ChevronRight size={17} />
           </button>
-          <button className="ghost-button full" onClick={() => { setError(""); onLogin(); }}>
+          <button className="ghost-button full demo-login-button" onClick={() => { setError(""); onLogin(); }}>
             <Sparkles size={16} /> Try Demo
           </button>
           {error && <p className="form-error">{error}</p>}
@@ -371,7 +371,7 @@ function Sidebar({ page, setPage, onLogout }) {
         <div className="profile">
           <div className="avatar">MS</div>
           <div>
-            <strong>Demo Admin</strong>
+            <strong>Demo workspace</strong>
             <small>Administrator</small>
           </div>
           <MoreHorizontal size={17} />
@@ -415,7 +415,7 @@ function Dashboard({ leads, onCreate, onSelect, onUpdate }) {
         <div>
           <p className="eyebrow">TUESDAY, SEPTEMBER 6, 2026</p>
           <h1>
-            Good morning, Demo Admin <span>✦</span>
+            Good morning <span>✦</span>
           </h1>
           <p className="muted">Here’s what’s moving in your pipeline today.</p>
         </div>
