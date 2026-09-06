@@ -9,6 +9,8 @@ import {
   ChevronRight,
   CircleUserRound,
   ClipboardList,
+  Eye,
+  EyeOff,
   Globe2,
   LayoutDashboard,
   LogOut,
@@ -260,28 +262,35 @@ function App() {
 function Login({ onLogin, onPublicSite }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const submit = () => {
-    setError("Use Try Demo to enter the fictional recruiter workspace.");
+    if (!email.trim() || !password) {
+      setError("Enter your email and password to continue.");
+      return;
+    }
+    setError("");
+    onLogin();
   };
   return (
     <div className="login-page">
       <div className="login-art">
-        <div className="brand-mark large">N</div>
-        <div>
-          <p className="eyebrow">NORTHLIGHT CRM</p>
+        <div className="login-brand-lockup">
+          <div className="brand-mark large">N</div>
+          <strong>Northlight CRM</strong>
+        </div>
+        <div className="login-art-copy">
           <h1>
             Make every
-            <br />
-            <em>conversation</em> count.
+            <br /><em>conversation</em>
+            <br />count.
           </h1>
           <p className="login-copy">
-            A calmer, clearer way to turn promising conversations into lasting
-            client relationships.
+            Turn promising inquiries into lasting client relationships.
           </p>
         </div>
         <div className="art-footer">
-          Client lead management system <span>•</span> 2026
+          Client Lead Management System
         </div>
       </div>
       <div className="login-panel">
@@ -290,9 +299,8 @@ function Login({ onLogin, onPublicSite }) {
             <div className="brand-mark">N</div>
             <span>Northlight</span>
           </div>
-          <p className="eyebrow">RECRUITER DEMO</p>
           <h2>Welcome back</h2>
-          <p className="muted">Explore the interactive client lead management system.</p>
+          <p className="muted">Sign in to your workspace to continue.</p>
           <label>
             Email address
             <input
@@ -307,9 +315,17 @@ function Login({ onLogin, onPublicSite }) {
             <input
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
             />
+            <button
+              className="password-toggle"
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((visible) => !visible)}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </label>
           <button className="primary-button full" onClick={submit}>
             Sign in <ChevronRight size={17} />
@@ -317,10 +333,9 @@ function Login({ onLogin, onPublicSite }) {
           <button className="ghost-button full demo-login-button" onClick={() => { setError(""); onLogin(); }}>
             <Sparkles size={16} /> Try Demo
           </button>
+          <p className="demo-hint">Explore the CRM with fictional sample data.</p>
           {error && <p className="form-error">{error}</p>}
-          <p className="demo-hint">
-            <Sparkles size={14} /> DEMO MODE · fictional data only
-          </p>
+          <p className="demo-badge">DEMO MODE · Fictional data only</p>
           <button className="public-link login-public-link" onClick={onPublicSite}>Explore public client site <ChevronRight size={15} /></button>
         </div>
       </div>
