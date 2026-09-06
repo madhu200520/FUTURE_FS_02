@@ -272,6 +272,9 @@ function Login({ onLogin, onPublicSite }) {
     setError("");
     onLogin();
   };
+  const forgotPassword = () => {
+    setError("Password recovery is unavailable in this demo. Use Try Demo to explore the workspace.");
+  };
   return (
     <div className="login-page">
       <div className="login-art">
@@ -327,8 +330,14 @@ function Login({ onLogin, onPublicSite }) {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </label>
+          <button className="forgot-link" type="button" onClick={forgotPassword}>
+            Forgot password?
+          </button>
           <button className="primary-button full" onClick={submit}>
             Sign in <ChevronRight size={17} />
+          </button>
+          <button className="login-alternate" type="button" onClick={submit}>
+            Log in
           </button>
           <button className="ghost-button full demo-login-button" onClick={() => { setError(""); onLogin(); }}>
             <Sparkles size={16} /> Try Demo
