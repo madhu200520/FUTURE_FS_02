@@ -1,232 +1,243 @@
-# Northlight CRM
+Northlight CRM
 
-A full-stack Customer Relationship Management (CRM) system for managing client inquiries, leads, follow-ups, notes, and sales pipeline activities.
+A full-stack Customer Relationship Management (CRM) application for managing leads, customer enquiries, follow-ups, notes, priorities, and admin access.
 
-Northlight CRM provides a public client inquiry form and a secure administrator dashboard for managing submitted leads.
+🚀 Live Demo
 
----
+Frontend: https://futurefs02-kappa.vercel.app/
 
-## 🚀 Live Demo
+Backend API: https://northlight-crm-api.onrender.com/
+
+Backend Health Check: https://northlight-crm-api.onrender.com/api/health
+
+🔐 Admin Demo Credentials
+
+Email: demo@northlightcrm.com
+Password: Northlight@123
+
+⚠️ These credentials are for demonstration and project evaluation purposes only. Do not use real passwords or sensitive credentials in a public repository.
+
+✨ Features
+
+Secure admin login with JWT authentication
+
+Password hashing with bcrypt
+
+Lead creation and management
+
+Customer enquiry management
+
+Lead status and priority tracking
+
+Follow-up date and task management
+
+Notes for individual leads
+
+Lead filtering and search
+
+Dashboard analytics
+
+Responsive user interface
+
+Public enquiry form
+
+MongoDB database integration
+
+RESTful backend API
+
+Protected admin API routes
+
+🛠️ Tech Stack
+
+Frontend
+
+React
+
+Vite
+
+JavaScript
+
+CSS
+
+Backend
+
+Node.js
+
+Express.js
+
+MongoDB
+
+Mongoose
+
+JWT
+
+bcryptjs
+
+CORS
+
+dotenv
+
+Deployment
+
+Frontend: Vercel
+
+Backend: Render
+
+Database: MongoDB Atlas
+
+🏗️ Architecture
+
+React + Vite Frontend
+        |
+        | REST API + JWT
+        v
+Node.js + Express Backend
+        |
+        v
+MongoDB Atlas
+
+📁 Project Structure
+
+FUTURE_FS_02/
+├── src/
+├── server/
+│   ├── models/
+│   │   ├── Admin.js
+│   │   └── Lead.js
+│   ├── server.js
+│   ├── package.json
+│   └── .env
+├── public/
+├── package.json
+├── vite.config.js
+├── .gitignore
+└── README.md
+
+⚙️ Local Setup
+
+1. Clone the repository
+
+git clone https://github.com/madhu200520/FUTURE_FS_02.git
+cd FUTURE_FS_02
+
+2. Install frontend dependencies
+
+npm install
+
+3. Install backend dependencies
+
+cd server
+npm install
+
+4. Configure backend environment variables
+
+Create server/.env:
+
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+PORT=5000
+
+Never commit .env files or real credentials to GitHub.
+
+5. Start the backend
+
+cd server
+npm start
+
+Backend:
+
+http://localhost:5000
+
+6. Start the frontend
+
+From the project root:
+
+npm run dev
 
 Frontend:
+
+http://localhost:5173
+
+🔗 API Endpoints
+
+Public
+
+GET  /api/health
+POST /api/auth/setup
+POST /api/auth/login
+POST /api/leads
+
+Protected
+
+GET    /api/auth/me
+GET    /api/leads
+GET    /api/leads/:id
+PUT    /api/leads/:id
+DELETE /api/leads/:id
+POST   /api/leads/:id/notes
+POST   /api/leads/:id/followups
+PUT    /api/leads/:id/followups/:followUpId
+DELETE /api/leads/:id/followups/:followUpId
+
+Protected endpoints require a valid JWT Bearer token.
+
+🔒 Security
+
+JWT-based authentication
+
+bcrypt password hashing
+
+Protected admin routes
+
+Environment variables for secrets
+
+CORS configuration
+
+MongoDB connection through environment variables
+
+Sensitive configuration excluded through .gitignore
+
+🌐 Deployment
+
+Frontend — Vercel
+
+Production frontend:
+
 https://futurefs02-kappa.vercel.app/
 
-> Backend API is deployed separately from the frontend.
+Production API configuration:
 
----
-## 🔐 Admin Demo Credentials
+VITE_API_URL=https://northlight-crm-api.onrender.com/api
 
-Use the following credentials to access the Northlight CRM admin dashboard:
+Backend — Render
 
-**Email:** `demo@northlightcrm.com`  
-**Password:** `Northlight@123`
+Production backend:
 
-## 📌 Project Overview
+https://northlight-crm-api.onrender.com/
 
-Northlight CRM is designed to help businesses manage potential customers from the initial inquiry to conversion.
+Health check:
 
-The system provides:
+https://northlight-crm-api.onrender.com/api/health
 
-- Public client inquiry form
-- Lead management
-- Lead pipeline tracking
-- Lead status management
-- Priority management
-- Follow-up scheduling
-- Notes and activity tracking
-- Dashboard statistics
-- Performance and conversion analytics
-- Email alert/activity log
-- Secure administrator login
-- JWT-based authentication
-- MongoDB database
-- REST API using Node.js and Express.js
+The Render service uses the server directory as its root directory and connects to MongoDB Atlas through MONGO_URI.
 
----
+Note: The Render free instance may sleep after inactivity, so the first request after inactivity can take longer.
 
-## ✨ Main Features
+🎓 Internship Project
 
-### 1. Public Client Site
+This project was developed as part of the Future Interns Full-Stack Web Development Internship.
 
-Clients can submit their project requirements without logging into the system.
+Task: FUTURE_FS_02
+Project: Northlight CRM
 
-Information collected:
+👩‍💻 Developer
 
-- Full name
-- Email
-- Phone
-- Company
-- Project / inquiry
-- Budget
-- Preferred contact method
-- Message
+Madhura S
 
-Submitted inquiries are stored in MongoDB and become leads in the administrator dashboard.
+GitHub: https://github.com/madhu200520
 
----
+📌 Important
 
-### 2. Admin Login
+This project is intended for educational, internship, and demonstration purposes.
 
-Administrators can securely log into the CRM.
-
-Authentication uses:
-
-- JWT
-- bcrypt password hashing
-- Protected API routes
-- Session-based token storage
-
----
-
-### 3. Lead Management
-
-Administrators can:
-
-- Create leads
-- View leads
-- Edit leads
-- Delete leads
-- Search leads
-- Filter leads
-- Change lead status
-- Set lead priority
-- View lead details
-
-Lead statuses:
-
-- New
-- Contacted
-- Converted
-
-Priority levels:
-
-- Low
-- Medium
-- High
-
----
-
-### 4. Follow-Up Management
-
-Administrators can:
-
-- Schedule follow-up dates
-- Update follow-ups
-- Track follow-up status
-- View upcoming follow-ups
-
----
-
-### 5. Notes
-
-Administrators can add notes to individual leads.
-
-They can also delete existing notes.
-
----
-
-### 6. Dashboard
-
-The dashboard displays:
-
-- Total inquiries
-- New leads
-- Contacted leads
-- Converted leads
-- Upcoming follow-ups
-- Pipeline information
-
----
-
-### 7. Analytics
-
-The analytics section provides:
-
-- Pipeline conversion funnel
-- Intake velocity
-- Stage distribution
-- Total leads
-- Open leads
-- Contacted rate
-- Conversion rate
-- Converted clients
-
----
-
-### 8. Email Alerts Log
-
-The CRM provides an activity log for:
-
-- New inquiries
-- Lead contact activity
-- Follow-up reminders
-
-The current version logs these activities inside the application.
-
----
-
-## 🛠️ Technology Stack
-
-### Frontend
-
-- React.js
-- Vite
-- JavaScript
-- HTML5
-- CSS3
-- Lucide React
-- Recharts
-
-### Backend
-
-- Node.js
-- Express.js
-- REST API
-
-### Database
-
-- MongoDB
-- Mongoose
-
-### Authentication
-
-- JWT (JSON Web Token)
-- bcryptjs
-- Session Storage
-
-### Development Tools
-
-- Visual Studio Code
-- Git
-- GitHub
-- npm
-- Vercel
-
----
-
-## 🏗️ System Architecture
-
-```text
-                    ┌─────────────────────┐
-                    │    Public Client    │
-                    │       Website       │
-                    └──────────┬──────────┘
-                               │
-                               │ Submit Inquiry
-                               ▼
-                    ┌─────────────────────┐
-                    │   Express REST API  │
-                    │      Node.js        │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │      MongoDB        │
-                    │    Lead Database    │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │   Admin Dashboard   │
-                    │      React.js       │
-                    └─────────────────────┘
+Do not store real user passwords, API keys, database credentials, or other secrets in the public repository.
