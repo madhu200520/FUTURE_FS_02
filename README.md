@@ -9,11 +9,17 @@ Northlight CRM provides a public client inquiry form and a secure administrator 
 ## 🚀 Live Demo
 
 Frontend:
-https://future-fs-02-woad-six.vercel.app
+https://futurefs02-kappa.vercel.app/
 
 > Backend API is deployed separately from the frontend.
 
 ---
+## 🔐 Admin Demo Credentials
+
+Use the following credentials to access the Northlight CRM admin dashboard:
+
+**Email:** `demo@northlightcrm.com`  
+**Password:** `Northlight@123`
 
 ## 📌 Project Overview
 
