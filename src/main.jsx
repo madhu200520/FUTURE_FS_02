@@ -39,7 +39,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { demoService } from "./services/demoService";
+import demoService from "./services/demoService";
 import AnalyticsEnhanced from "./components/AnalyticsEnhanced";
 import "./styles.css";
 
@@ -75,6 +75,9 @@ const blankLead = {
   phone: "",
   company: "",
   project: "",
+  budget: "",
+  preferredContact: "Email",
+  message: "",
   source: "Website",
   status: "New",
   priority: "Medium",
@@ -99,7 +102,7 @@ const initials = (name) =>
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
-    () => sessionStorage.getItem("northlight-auth") === "true",
+    () => demoService.isAuthenticated(),
   );
   const [page, setPage] = useState(() =>
     window.location.search.includes("public=true") ? "public" : "dashboard",
@@ -108,29 +111,90 @@ function App() {
   const [selected, setSelected] = useState(null);
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
-  useEffect(() => setLeads(demoService.list()), []);
+  const [notifications, setNotifications] = useState([]);
+  const [openMenu, setOpenMenu] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setLeads([]);
+      setSelected(null);
+      setNotifications([]);
+      return;
+    }
+
+    const loadLeads = async () => {
+      try {
+        const data = await demoService.list();
+        setLeads(data);
+      } catch (error) {
+        console.error("Failed to load leads:", error);
+
+        if (
+          error.message === "Authentication required" ||
+          error.message === "Invalid or expired token"
+        ) {
+          demoService.logout();
+          setIsLoggedIn(false);
+        }
+      }
+    };
+
+    loadLeads();
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setNotifications(demoService.notifications());
+    } else {
+      setNotifications([]);
+    }
+  }, [isLoggedIn]);
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(""), 2800);
       return () => clearTimeout(timer);
     }
   }, [toast]);
-  const refresh = () => setLeads(demoService.list());
+  const refresh = async () => {
+    try {
+      const data = await demoService.list();
+      setLeads(data);
+      setNotifications(demoService.notifications());
+      return data;
+    } catch (error) {
+      console.error("Refresh failed:", error);
+
+      if (
+        error.message === "Authentication required" ||
+        error.message === "Invalid or expired token"
+      ) {
+        demoService.logout();
+        setIsLoggedIn(false);
+      }
+
+      throw error;
+    }
+  };
   const notify = (message) => setToast(message);
   if (page === "public")
     return (
       <PublicSite
         onBack={() => setPage("dashboard")}
-        onSubmit={(data) => {
-          demoService.create({
-            ...data,
-            status: "New",
-            priority: "Medium",
-            source: "Website",
-            followUpDate: "",
-          });
-          refresh();
-          notify("Inquiry added to your pipeline");
+        onSubmit={async (data) => {
+          try {
+            await demoService.create({
+              ...data,
+              status: "New",
+              priority: "Medium",
+              source: "Website",
+              followUpDate: "",
+            });
+            await refresh();
+            notify("Inquiry added to your pipeline");
+          } catch (error) {
+            console.error("Inquiry submission failed:", error);
+            notify("Failed to submit inquiry.");
+          }
         }}
       />
     );
@@ -138,20 +202,20 @@ function App() {
     return (
       <Login
         onPublicSite={() => setPage("public")}
-        onLogin={() => {
-          sessionStorage.setItem("northlight-auth", "true");
-          setIsLoggedIn(true);
-        }}
+        onLogin={() => setIsLoggedIn(true)}
       />
     );
   return (
     <div className="app-shell">
-      <Sidebar
+          <Sidebar
         page={page}
         setPage={setPage}
+            onNavigate={(nextPage) => { setOpenMenu(null); setPage(nextPage); }}
         onLogout={() => {
-          sessionStorage.removeItem("northlight-auth");
+          demoService.logout();
           setIsLoggedIn(false);
+          setLeads([]);
+          setSelected(null);
         }}
       />
       <main className="main-content">
@@ -165,25 +229,44 @@ function App() {
             <strong>{nav.find((item) => item.id === page)?.label}</strong>
           </div>
           <div className="top-actions">
-            <span className="demo-pill">
-              <span></span> Demo mode
-            </span>
-            <button className="icon-button">
+            <button className="icon-button notification-trigger" aria-label="Notifications" onClick={() => setOpenMenu(openMenu === "notifications" ? null : "notifications")}>
               <Bell size={18} />
+              {notifications.some((item) => !item.read) && <span className="unread-dot" />}
             </button>
-            <div className="mini-avatar">M</div>
+            <button className="mini-avatar avatar-button" aria-label="Profile menu" onClick={() => setOpenMenu(openMenu === "profile" ? null : "profile")}>M</button>
+            {openMenu === "notifications" && <NotificationPopover notifications={notifications} onRead={(id) => { demoService.markNotification(id); refresh(); }} onReadAll={() => { demoService.markAllNotifications(); refresh(); }} onClose={() => setOpenMenu(null)} />}
+            {openMenu === "profile" && (
+              <ProfileMenu
+                onProfile={() => setModal({ type: "profile" })}
+                onSettings={() => setModal({ type: "settings" })}
+                onLogout={() => {
+                  demoService.logout();
+                  setIsLoggedIn(false);
+                  setLeads([]);
+                  setSelected(null);
+                  setOpenMenu(null);
+                }}
+              />
+            )}
           </div>
         </header>
         {page === "dashboard" && (
           <Dashboard
             leads={leads}
+            leadCount={leads.length}
             onCreate={() => setModal({ type: "create" })}
             onSelect={(lead) => setSelected(lead)}
-            onUpdate={(id, changes) => {
-              demoService.update(id, changes);
-              refresh();
-              notify("Lead updated");
+            onUpdate={async (id, changes) => {
+              try {
+                await demoService.update(id, changes);
+                await refresh();
+                notify("Status updated.");
+              } catch (error) {
+                console.error("Lead update failed:", error);
+                notify("Failed to update lead.");
+              }
             }}
+            onFilter={(value) => setPage("dashboard-filter")}
           />
         )}
         {page === "analytics" && (
@@ -211,29 +294,64 @@ function App() {
             setSelected(null);
             setModal({ type: "edit", lead: selected });
           }}
-          onRefresh={(message) => {
-            refresh();
-            setSelected(
-              demoService.list().find((lead) => lead.id === selected.id),
-            );
-            notify(message);
+          onRefresh={async (message) => {
+            try {
+              const updatedLeads = await refresh();
+              const updatedLead = updatedLeads.find(
+                (lead) => lead.id === selected.id,
+              );
+              if (updatedLead) setSelected(updatedLead);
+              notify(message);
+            } catch (error) {
+              console.error("Refresh failed:", error);
+              notify("Failed to refresh lead.");
+            }
           }}
-          onDelete={() => {
-            demoService.remove(selected.id);
-            setSelected(null);
-            refresh();
-            notify("Lead deleted");
+          onStatusChange={async (status) => {
+            try {
+              const updatedLead = await demoService.update(selected.id, { status });
+              await refresh();
+              if (updatedLead) setSelected(updatedLead);
+              notify("Status updated.");
+            } catch (error) {
+              console.error("Status update failed:", error);
+              notify("Failed to update status.");
+            }
+          }}
+          onDelete={() => setConfirmDelete(selected)}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmModal
+          lead={confirmDelete}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            try {
+              await demoService.remove(confirmDelete.id);
+              setConfirmDelete(null);
+              setSelected(null);
+              await refresh();
+              notify("Lead deleted.");
+            } catch (error) {
+              console.error("Lead deletion failed:", error);
+              notify("Failed to delete lead.");
+            }
           }}
         />
       )}
       {modal?.type === "create" && (
         <LeadForm
           onClose={() => setModal(null)}
-          onSave={(data) => {
-            demoService.create(data);
-            refresh();
-            setModal(null);
-            notify("New lead added");
+          onSave={async (data) => {
+            try {
+              await demoService.create(data);
+              await refresh();
+              setModal(null);
+              notify("New lead added");
+            } catch (error) {
+              console.error("Lead creation failed:", error);
+              notify("Failed to create lead.");
+            }
           }}
         />
       )}
@@ -241,14 +359,20 @@ function App() {
         <LeadForm
           lead={modal.lead}
           onClose={() => setModal(null)}
-          onSave={(data) => {
-            demoService.update(data.id, data);
-            refresh();
-            setModal(null);
-            notify("Lead updated");
+          onSave={async (data) => {
+            try {
+              await demoService.update(data.id, data);
+              await refresh();
+              setModal(null);
+              notify("Lead updated");
+            } catch (error) {
+              console.error("Lead update failed:", error);
+              notify("Failed to update lead.");
+            }
           }}
         />
       )}
+      {(modal?.type === "profile" || modal?.type === "settings") && <InfoModal type={modal.type} onClose={() => setModal(null)} />}
       {toast && (
         <div className="toast">
           <Check size={16} />
@@ -264,16 +388,29 @@ function Login({ onLogin, onPublicSite }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const submit = () => {
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
     if (!email.trim() || !password) {
       setError("Enter your email and password to continue.");
       return;
     }
+
     setError("");
-    onLogin();
+    setLoading(true);
+
+    try {
+      await demoService.login(email, password);
+      onLogin();
+    } catch (loginError) {
+      console.error("Login failed:", loginError);
+      setError(loginError.message || "Invalid email or password.");
+    } finally {
+      setLoading(false);
+    }
   };
   const forgotPassword = () => {
-    setError("Password recovery is unavailable in this demo. Use Try Demo to explore the workspace.");
+    setError("Password recovery is not configured for this workspace.");
   };
   return (
     <div className="login-page">
@@ -333,18 +470,23 @@ function Login({ onLogin, onPublicSite }) {
           <button className="forgot-link" type="button" onClick={forgotPassword}>
             Forgot password?
           </button>
-          <button className="primary-button full" onClick={submit}>
-            Sign in <ChevronRight size={17} />
+          <button
+            className="primary-button full"
+            onClick={submit}
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign in"}
+            {!loading && <ChevronRight size={17} />}
           </button>
-          <button className="login-alternate" type="button" onClick={submit}>
-            Log in
+          <button
+            className="login-alternate"
+            type="button"
+            onClick={submit}
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Log in"}
           </button>
-          <button className="ghost-button full demo-login-button" onClick={() => { setError(""); onLogin(); }}>
-            <Sparkles size={16} /> Try Demo
-          </button>
-          <p className="demo-hint">Explore the CRM with fictional sample data.</p>
           {error && <p className="form-error">{error}</p>}
-          <p className="demo-badge">DEMO MODE · Fictional data only</p>
           <button className="public-link login-public-link" onClick={onPublicSite}>Explore public client site <ChevronRight size={15} /></button>
         </div>
       </div>
@@ -352,7 +494,23 @@ function Login({ onLogin, onPublicSite }) {
   );
 }
 
-function Sidebar({ page, setPage, onLogout }) {
+function NotificationPopover({ notifications, onRead, onReadAll, onClose }) {
+  return <div className="popover notification-popover"><div className="popover-header"><strong>Notifications</strong><button className="text-button" onClick={onReadAll}>Mark all read</button></div>{notifications.length ? notifications.slice(0, 6).map((item) => <button className={item.read ? "notification-item" : "notification-item unread"} key={item.id} onClick={() => onRead(item.id)}><span className="notification-icon"><Bell size={14} /></span><span><strong>{item.type === "status" ? "Lead status changed" : item.type === "followup" ? "Follow-up updated" : item.type === "deleted" ? "Lead deleted" : "New lead activity"}</strong><small>{item.description}</small><time>{fmtDate(item.createdAt)}</time></span></button>) : <p className="popover-empty">You're all caught up.</p>}<button className="popover-close" onClick={onClose}>Close</button></div>;
+}
+
+function ProfileMenu({ onProfile, onSettings, onLogout }) {
+  return <div className="popover profile-popover"><strong>Workspace profile</strong><small>Local CRM administrator</small><button onClick={onProfile}><CircleUserRound size={16} /> Profile</button><button onClick={onSettings}><Settings2 size={16} /> Settings</button><button onClick={onLogout}><LogOut size={16} /> Sign out</button></div>;
+}
+
+function InfoModal({ type, onClose }) {
+  return <div className="modal-backdrop"><div className="modal small-modal"><div className="modal-header"><div><p className="eyebrow">WORKSPACE</p><h2>{type === "profile" ? "Profile" : "Settings"}</h2></div><button className="icon-button" onClick={onClose}><X size={19} /></button></div><div className="info-modal-body">{type === "profile" ? <><strong>Local CRM administrator</strong><p className="muted">This workspace uses browser persistence for the current application.</p></> : <><strong>Workspace settings</strong><p className="muted">Notifications and lead activity are enabled for this workspace.</p></>}</div></div></div>;
+}
+
+function ConfirmModal({ lead, onCancel, onConfirm }) {
+  return <div className="modal-backdrop"><div className="modal small-modal"><div className="modal-header"><div><p className="eyebrow">PIPELINE</p><h2>Delete this lead?</h2></div><button className="icon-button" onClick={onCancel}><X size={19} /></button></div><div className="info-modal-body"><p className="muted">This will remove {lead.name} from the local pipeline.</p></div><div className="modal-actions"><button className="ghost-button" onClick={onCancel}>Cancel</button><button className="danger-button" onClick={onConfirm}>Delete</button></div></div></div>;
+}
+
+function Sidebar({ page, setPage, onNavigate = setPage, onLogout, leadCount = 0 }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -376,13 +534,13 @@ function Sidebar({ page, setPage, onLogout }) {
                     className={
                       page === item.id ? "nav-item active" : "nav-item"
                     }
-                    onClick={() => setPage(item.id)}
+                    onClick={() => onNavigate(item.id)}
                   >
                     <Icon size={18} />
                     {item.label}
                     {item.id === "dashboard" && (
                       <span className="nav-count">
-                        {demoService.list().length}
+                        {leadCount}
                       </span>
                     )}
                   </button>
@@ -395,7 +553,7 @@ function Sidebar({ page, setPage, onLogout }) {
         <div className="profile">
           <div className="avatar">MS</div>
           <div>
-            <strong>Demo workspace</strong>
+            <strong>Administrator</strong>
             <small>Administrator</small>
           </div>
           <MoreHorizontal size={17} />
@@ -410,8 +568,8 @@ function Sidebar({ page, setPage, onLogout }) {
 
 function Dashboard({ leads, onCreate, onSelect, onUpdate }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("All");
-  const [priority, setPriority] = useState("All");
+  const [status, setStatus] = useState("All statuses");
+  const [priority, setPriority] = useState("All priorities");
   const stats = ["Total inquiries", "New", "Contacted", "Converted"].map(
     (label) => ({
       label,
@@ -426,8 +584,8 @@ function Dashboard({ leads, onCreate, onSelect, onUpdate }) {
       `${lead.name} ${lead.email} ${lead.company} ${lead.project}`
         .toLowerCase()
         .includes(query.toLowerCase()) &&
-      (status === "All" || lead.status === status) &&
-      (priority === "All" || lead.priority === priority),
+      (status === "All statuses" || lead.status === status) &&
+      (priority === "All priorities" || lead.priority === priority),
   );
   const upcoming = leads
     .filter((lead) => lead.followUpDate)
@@ -870,10 +1028,7 @@ function Alerts({ leads }) {
         </div>
       </div>
       <section className="panel leads-panel">
-        <div className="notice">
-          <Bell size={17} />
-          <span>Demo mode records events locally. No emails are sent.</span>
-        </div>
+        <div className="notice"><Bell size={17} /><span>Events are logged locally. Email delivery is not configured.</span></div>
         <div className="table-wrap">
           <table>
             <thead>
@@ -909,8 +1064,15 @@ function Alerts({ leads }) {
 
 function LeadForm({ lead, onClose, onSave }) {
   const [form, setForm] = useState(lead || blankLead);
+  const [error, setError] = useState("");
   const change = (field, value) =>
     setForm((current) => ({ ...current, [field]: value }));
+  const save = () => {
+    if (!form.name.trim() || !form.project.trim()) { setError("Name and project are required."); return; }
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) { setError("Enter a valid email address."); return; }
+    setError("");
+    onSave(form);
+  };
   return (
     <div className="modal-backdrop">
       <div className="modal large-modal">
@@ -933,7 +1095,7 @@ function LeadForm({ lead, onClose, onSave }) {
             />
           </label>
           <label>
-            Email address *
+            Email address
             <input
               type="email"
               value={form.email}
@@ -960,6 +1122,16 @@ function LeadForm({ lead, onClose, onSave }) {
               value={form.project}
               onChange={(event) => change("project", event.target.value)}
             />
+          </label>
+          <label>
+            Budget
+            <select value={form.budget} onChange={(event) => change("budget", event.target.value)}>
+              <option value="">Select range</option><option>$5k - $10k</option><option>$10k - $25k</option><option>$25k+</option>
+            </select>
+          </label>
+          <label>
+            Preferred contact
+            <select value={form.preferredContact} onChange={(event) => change("preferredContact", event.target.value)}><option>Email</option><option>Phone</option></select>
           </label>
           <label>
             Source
@@ -1003,16 +1175,17 @@ function LeadForm({ lead, onClose, onSave }) {
               onChange={(event) => change("followUpDate", event.target.value)}
             />
           </label>
+          <label className="wide">
+            Message
+            <textarea rows="3" value={form.message} onChange={(event) => change("message", event.target.value)} placeholder="Add context about the inquiry..." />
+          </label>
         </div>
         <div className="modal-actions">
           <button className="ghost-button" onClick={onClose}>
             Cancel
           </button>
-          <button
-            className="primary-button"
-            disabled={!form.name || !form.email || !form.project}
-            onClick={() => onSave(form)}
-          >
+          {error && <span className="form-error form-error-inline">{error}</span>}
+          <button className="primary-button" onClick={save}>
             {lead ? "Save changes" : "Create lead"}
           </button>
         </div>
@@ -1021,7 +1194,7 @@ function LeadForm({ lead, onClose, onSave }) {
   );
 }
 
-function LeadDetails({ lead, onClose, onEdit, onRefresh, onDelete }) {
+function LeadDetails({ lead, onClose, onEdit, onRefresh, onStatusChange, onDelete }) {
   const [note, setNote] = useState("");
   const [editingFollowUp, setEditingFollowUp] = useState(false);
   return (
@@ -1055,6 +1228,7 @@ function LeadDetails({ lead, onClose, onEdit, onRefresh, onDelete }) {
                 {lead.priority} priority
               </span>
             </div>
+            <button className="ghost-button" onClick={() => onStatusChange(lead.status === "New" ? "Contacted" : lead.status === "Contacted" ? "Converted" : "New")}>Move to {lead.status === "New" ? "Contacted" : lead.status === "Contacted" ? "Converted" : "New"}</button>
             <div className="detail-section">
               <p className="eyebrow">PROJECT INQUIRY</p>
               <h3>{lead.project}</h3>
@@ -1087,12 +1261,15 @@ function LeadDetails({ lead, onClose, onEdit, onRefresh, onDelete }) {
                   <p>{item.text}</p>
                   <button
                     className="delete-icon"
-                    onClick={() =>
-                      onRefresh(
-                        (demoService.removeNote(lead.id, item.id),
-                        "Note removed"),
-                      )
-                    }
+                    onClick={async () => {
+                      try {
+                        await demoService.removeNote(lead.id, item.id);
+                        await onRefresh("Note removed");
+                      } catch (error) {
+                        console.error("Note removal failed:", error);
+                        await onRefresh("Failed to remove note");
+                      }
+                    }}
                   >
                     <Trash2 size={15} />
                   </button>
@@ -1107,10 +1284,15 @@ function LeadDetails({ lead, onClose, onEdit, onRefresh, onDelete }) {
                 <button
                   className="primary-button"
                   disabled={!note.trim()}
-                  onClick={() => {
-                    demoService.addNote(lead.id, note.trim());
-                    setNote("");
-                    onRefresh("Note added");
+                  onClick={async () => {
+                    try {
+                      await demoService.addNote(lead.id, note.trim());
+                      setNote("");
+                      await onRefresh("Note added");
+                    } catch (error) {
+                      console.error("Note add failed:", error);
+                      await onRefresh("Failed to add note");
+                    }
                   }}
                 >
                   Add
@@ -1137,12 +1319,17 @@ function LeadDetails({ lead, onClose, onEdit, onRefresh, onDelete }) {
                 <input
                   type="date"
                   defaultValue={lead.followUpDate}
-                  onChange={(event) => {
-                    demoService.update(lead.id, {
-                      followUpDate: event.target.value,
-                    });
-                    onRefresh("Follow-up updated");
-                    setEditingFollowUp(false);
+                  onChange={async (event) => {
+                    try {
+                      await demoService.update(lead.id, {
+                        followUpDate: event.target.value,
+                      });
+                      await onRefresh("Follow-up updated");
+                      setEditingFollowUp(false);
+                    } catch (error) {
+                      console.error("Follow-up update failed:", error);
+                      await onRefresh("Failed to update follow-up");
+                    }
                   }}
                 />
               )}

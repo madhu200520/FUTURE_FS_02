@@ -1,33 +1,90 @@
 # Northlight CRM
 
-Northlight CRM is a professional mini CRM for managing client inquiries, pipeline stages, follow-ups, notes, and conversion performance.
+A full-stack Customer Relationship Management (CRM) system for managing client inquiries, leads, follow-ups, notes, and sales pipeline activities.
 
-It currently runs as a complete local/demo MVP using browser `localStorage`, so it works without a backend configuration.
+Northlight CRM provides a public client inquiry form and a secure administrator dashboard for managing submitted leads.
 
-## Features
+---
 
-### Authentication
+## 🚀 Live Demo
 
-- Protected CRM workspace
-- Recruiter-friendly Try Demo access
-- Sign in and sign out
-- Fictional demo data with a visible DEMO MODE badge
-- Use the visible `Try Demo` button for credential-free fictional demo access.
+Frontend:
+https://future-fs-02-woad-six.vercel.app
 
-> Demo access is for demonstration only. The current MVP stores fictional records in browser `localStorage` and is not intended for production client data.
+> Backend API is deployed separately from the frontend.
 
-### Pipeline Leads
+---
 
-- View all leads
-- Add leads
-- Edit lead details
+## 📌 Project Overview
+
+Northlight CRM is designed to help businesses manage potential customers from the initial inquiry to conversion.
+
+The system provides:
+
+- Public client inquiry form
+- Lead management
+- Lead pipeline tracking
+- Lead status management
+- Priority management
+- Follow-up scheduling
+- Notes and activity tracking
+- Dashboard statistics
+- Performance and conversion analytics
+- Email alert/activity log
+- Secure administrator login
+- JWT-based authentication
+- MongoDB database
+- REST API using Node.js and Express.js
+
+---
+
+## ✨ Main Features
+
+### 1. Public Client Site
+
+Clients can submit their project requirements without logging into the system.
+
+Information collected:
+
+- Full name
+- Email
+- Phone
+- Company
+- Project / inquiry
+- Budget
+- Preferred contact method
+- Message
+
+Submitted inquiries are stored in MongoDB and become leads in the administrator dashboard.
+
+---
+
+### 2. Admin Login
+
+Administrators can securely log into the CRM.
+
+Authentication uses:
+
+- JWT
+- bcrypt password hashing
+- Protected API routes
+- Session-based token storage
+
+---
+
+### 3. Lead Management
+
+Administrators can:
+
+- Create leads
+- View leads
+- Edit leads
 - Delete leads
-- Search by name, email, company, or project
-- Filter by status and priority
-- Change status and priority
+- Search leads
+- Filter leads
+- Change lead status
+- Set lead priority
 - View lead details
-- Add and delete notes
-- Add or change follow-up dates
 
 Lead statuses:
 
@@ -35,205 +92,135 @@ Lead statuses:
 - Contacted
 - Converted
 
-Lead priorities:
+Priority levels:
 
 - Low
 - Medium
 - High
 
-Lead sources:
+---
 
-- Website
-- LinkedIn
-- Referral
-- Other
+### 4. Follow-Up Management
 
-### Dashboard
+Administrators can:
 
-- Total inquiry count
-- New, contacted, and converted counts
-- Recent pipeline leads
+- Schedule follow-up dates
+- Update follow-ups
+- Track follow-up status
+- View upcoming follow-ups
+
+---
+
+### 5. Notes
+
+Administrators can add notes to individual leads.
+
+They can also delete existing notes.
+
+---
+
+### 6. Dashboard
+
+The dashboard displays:
+
+- Total inquiries
+- New leads
+- Contacted leads
+- Converted leads
 - Upcoming follow-ups
-- Empty states and validation
-- Toast feedback after actions
+- Pipeline information
 
-### Performance & Funnel
+---
 
-- Dynamic KPI cards
-- Last 7, 30, and 90 day range selector
+### 7. Analytics
+
+The analytics section provides:
+
 - Pipeline conversion funnel
-- Intake velocity line chart
-- Stage distribution donut chart
-- Conversion insights
-- Follow-up overview
-- Recent CRM activity
-- Quick actions for common workflows
+- Intake velocity
+- Stage distribution
+- Total leads
+- Open leads
+- Contacted rate
+- Conversion rate
+- Converted clients
 
-All displayed statistics are calculated from the current lead records.
+---
 
-### Email Alerts Log
+### 8. Email Alerts Log
 
-The activity log records local CRM events such as:
+The CRM provides an activity log for:
 
-- New inquiry received
-- Lead contacted
-- Follow-up reminder
+- New inquiries
+- Lead contact activity
+- Follow-up reminders
 
-Demo mode does not send real emails.
+The current version logs these activities inside the application.
 
-### Public Client Site
+---
 
-The public site includes an inquiry form with:
+## 🛠️ Technology Stack
 
-- Name
-- Email
-- Phone
-- Company
-- Project or inquiry
-- Budget
-- Preferred contact method
-- Message
+### Frontend
 
-Submitted inquiries are saved as new demo leads and show a success confirmation.
-
-## Technology
-
-- React
+- React.js
 - Vite
-- Recharts
+- JavaScript
+- HTML5
+- CSS3
 - Lucide React
-- CSS
-- Browser `localStorage` for demo persistence
+- Recharts
 
-## Project Structure
+### Backend
 
-```text
-src/
-  components/
-    AnalyticsEnhanced.jsx
-    analytics.css
-  services/
-    demoService.js
-  main.jsx
-  styles.css
-index.html
-package.json
-vite.config.js
-README.md
-```
+- Node.js
+- Express.js
+- REST API
 
-## Requirements
+### Database
 
-- Node.js 18 or newer
+- MongoDB
+- Mongoose
+
+### Authentication
+
+- JWT (JSON Web Token)
+- bcryptjs
+- Session Storage
+
+### Development Tools
+
+- Visual Studio Code
+- Git
+- GitHub
 - npm
+- Vercel
 
-## Installation
+---
 
-From the project directory:
-
-```bash
-npm install
-```
-
-## Run Locally
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Open the local URL shown by Vite, usually:
+## 🏗️ System Architecture
 
 ```text
-http://127.0.0.1:5173/
-```
-
-## Production Build
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-## Vercel Deployment
-
-Import the repository into Vercel with these settings:
-
-- Framework preset: Vite
-- Root directory: project root
-- Build command: `npm run build`
-- Output directory: `dist`
-
-No environment variables are required for the current demo MVP.
-
-## Demo Data
-
-The first load creates fictional leads covering all pipeline stages. Changes are stored in browser `localStorage` under the key:
-
-```text
-northlight-crm-demo-v2
-```
-
-To reset demo data, clear that local storage entry in the browser developer tools and reload the application.
-
-## Supabase Production Path
-
-Supabase is not configured in the current workspace. The application therefore runs in demo mode.
-
-For a production implementation, add these frontend environment variables using the public Supabase client credentials:
-
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-Never expose a Supabase service-role key in frontend code.
-
-A production backend should provide these tables and relationships:
-
-- `profiles`
-- `leads`
-- `notes`
-- `follow_ups`
-
-Recommended access rules:
-
-- Authenticated administrators can read and manage CRM data.
-- Public visitors can insert new inquiries only.
-- Public visitors cannot read, update, or delete existing leads.
-- Row Level Security should be enabled for all production tables.
-
-## Verification Checklist
-
-The current MVP has been verified for:
-
-- Demo login
-- Protected CRM view
-- Logout
-- Lead creation
-- Lead editing
-- Lead deletion
-- Search and filters
-- Status and priority changes
-- Lead details
-- Notes
-- Follow-up dates
-- Dashboard totals
-- Performance funnel
-- Dynamic chart ranges
-- Public inquiry submission
-- Inquiry success confirmation
-- Responsive layout
-- Production build
-
-## Notes
-
-This project intentionally focuses on a working CRM MVP. It does not include real email delivery, payment systems, AI features, or enterprise permissions.
+                    ┌─────────────────────┐
+                    │    Public Client    │
+                    │       Website       │
+                    └──────────┬──────────┘
+                               │
+                               │ Submit Inquiry
+                               ▼
+                    ┌─────────────────────┐
+                    │   Express REST API  │
+                    │      Node.js        │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │      MongoDB        │
+                    │    Lead Database    │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │   Admin Dashboard   │
+                    │      React.js       │
+                    └─────────────────────┘

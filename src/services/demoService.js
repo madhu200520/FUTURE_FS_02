@@ -1,24 +1,412 @@
-const KEY = 'northlight-crm-demo-v2'
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const seedLeads = [
-  { id: 'demo-1', name: 'Aarav Sharma', email: 'aarav@greenleaf.tech', phone: '+91 98765 43210', company: 'GreenLeaf Technologies', project: 'E-commerce Website', source: 'Website', status: 'New', priority: 'High', notes: [], followUpDate: '2026-09-08', createdAt: '2026-09-04T09:20:00Z' },
-  { id: 'demo-2', name: 'Priya Nair', email: 'priya@pixelcraft.studio', phone: '+91 98450 12345', company: 'PixelCraft Studio', project: 'Brand Website', source: 'Referral', status: 'Contacted', priority: 'Medium', notes: [{ id: 'demo-note-2', text: 'Discovery call completed. Preparing a proposal for the brand website.', createdAt: '2026-09-03T10:00:00Z' }], followUpDate: '2026-09-10', createdAt: '2026-09-02T14:45:00Z' },
-  { id: 'demo-3', name: 'Rahul Verma', email: 'rahul@novadigital.in', phone: '+91 99887 66554', company: 'Nova Digital', project: 'CRM Development', source: 'LinkedIn', status: 'Converted', priority: 'High', notes: [{ id: 'demo-note-3', text: 'Contract signed. Move the account into onboarding.', createdAt: '2026-08-30T12:30:00Z' }], followUpDate: '2026-09-15', createdAt: '2026-08-25T08:10:00Z' },
-  { id: 'demo-4', name: 'Meera Kapoor', email: 'meera@brightpath.co', phone: '+91 98111 22334', company: 'BrightPath Consulting', project: 'Marketing Automation', source: 'Website', status: 'New', priority: 'Medium', notes: [], followUpDate: '', createdAt: '2026-09-01T11:30:00Z' },
-  { id: 'demo-5', name: 'Daniel Brooks', email: 'daniel@orbitworks.com', phone: '+1 415 555 0199', company: 'Orbit Works', project: 'Product Design Sprint', source: 'Other', status: 'Contacted', priority: 'Low', notes: [], followUpDate: '2026-09-12', createdAt: '2026-08-29T16:00:00Z' }
-]
+/* =========================
+   AUTH HELPERS
+========================= */
 
-function read() {
-  const saved = localStorage.getItem(KEY)
-  return saved ? JSON.parse(saved) : seedLeads
+function getToken() {
+  return sessionStorage.getItem("northlight-token");
 }
-function write(leads) { localStorage.setItem(KEY, JSON.stringify(leads)); return leads }
-export const demoService = {
-  list: () => read(),
-  create: (lead) => { const next = { ...lead, id: crypto.randomUUID(), createdAt: new Date().toISOString(), notes: [] }; write([next, ...read()]); return next },
-  update: (id, changes) => { const next = read().map((lead) => lead.id === id ? { ...lead, ...changes } : lead); write(next); return next.find((lead) => lead.id === id) },
-  remove: (id) => write(read().filter((lead) => lead.id !== id)),
-  addNote: (id, text) => { const lead = read().find((item) => item.id === id); return demoService.update(id, { notes: [...(lead?.notes || []), { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() }] }) },
-  removeNote: (leadId, noteId) => { const lead = read().find((item) => item.id === leadId); return demoService.update(leadId, { notes: lead.notes.filter((note) => note.id !== noteId) }) },
-  reset: () => write(seedLeads)
+
+function authHeaders() {
+  const token = getToken();
+
+  return {
+    "Content-Type": "application/json",
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {}),
+  };
 }
+
+/* =========================
+   HELPERS
+========================= */
+
+function getFollowUpDate(lead) {
+  if (!lead?.followUps || lead.followUps.length === 0) {
+    return "";
+  }
+
+  const activeFollowUp =
+    lead.followUps.find((item) => !item.completed) ||
+    lead.followUps[0];
+
+  if (!activeFollowUp?.date) {
+    return "";
+  }
+
+  return new Date(activeFollowUp.date)
+    .toISOString()
+    .split("T")[0];
+}
+
+function mapLead(lead) {
+  return {
+    ...lead,
+    id: lead._id || lead.id,
+    followUpDate: getFollowUpDate(lead),
+  };
+}
+
+/* =========================
+   SERVICE
+========================= */
+
+const demoService = {
+  /* =========================
+     AUTHENTICATION
+  ========================= */
+
+  async login(email, password) {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Login failed");
+    }
+
+    sessionStorage.setItem("northlight-token", data.token);
+
+    sessionStorage.setItem(
+      "northlight-admin",
+      JSON.stringify(data.admin),
+    );
+
+    sessionStorage.setItem("northlight-auth", "true");
+
+    return data;
+  },
+
+  logout() {
+    sessionStorage.removeItem("northlight-token");
+    sessionStorage.removeItem("northlight-admin");
+    sessionStorage.removeItem("northlight-auth");
+  },
+
+  isAuthenticated() {
+    return Boolean(getToken());
+  },
+
+  /* =========================
+     GET LEADS
+  ========================= */
+
+  async list() {
+    const response = await fetch(`${API_URL}/leads`, {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to fetch leads",
+      );
+    }
+
+    return (data.leads || []).map(mapLead);
+  },
+
+  /* =========================
+     GET SINGLE LEAD
+  ========================= */
+
+  async get(id) {
+    const response = await fetch(`${API_URL}/leads/${id}`, {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to fetch lead",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     CREATE LEAD
+     PUBLIC
+  ========================= */
+
+  async create(lead) {
+    const payload = {
+      ...lead,
+
+      followUps: lead.followUpDate
+        ? [
+            {
+              date: lead.followUpDate,
+              note: "",
+              completed: false,
+            },
+          ]
+        : [],
+    };
+
+    delete payload.followUpDate;
+    delete payload.id;
+    delete payload._id;
+
+    const response = await fetch(`${API_URL}/leads`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to create lead",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     UPDATE LEAD
+  ========================= */
+
+  async update(id, changes) {
+    const payload = {
+      ...changes,
+    };
+
+    delete payload.id;
+    delete payload._id;
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        changes,
+        "followUpDate",
+      )
+    ) {
+      payload.followUps = changes.followUpDate
+        ? [
+            {
+              date: changes.followUpDate,
+              note: "",
+              completed: false,
+            },
+          ]
+        : [];
+
+      delete payload.followUpDate;
+    }
+
+    const response = await fetch(
+      `${API_URL}/leads/${id}`,
+      {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to update lead",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     DELETE LEAD
+  ========================= */
+
+  async remove(id) {
+    const response = await fetch(
+      `${API_URL}/leads/${id}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to delete lead",
+      );
+    }
+
+    return true;
+  },
+
+  /* =========================
+     ADD NOTE
+  ========================= */
+
+  async addNote(id, text) {
+    const response = await fetch(
+      `${API_URL}/leads/${id}/notes`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          text,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to add note",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     DELETE NOTE
+  ========================= */
+
+  async removeNote(id, noteId) {
+    const response = await fetch(
+      `${API_URL}/leads/${id}/notes/${noteId}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to delete note",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     ADD FOLLOW-UP
+  ========================= */
+
+  async addFollowUp(id, followUp) {
+    const response = await fetch(
+      `${API_URL}/leads/${id}/followups`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(followUp),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to add follow-up",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     UPDATE FOLLOW-UP
+  ========================= */
+
+  async updateFollowUp(
+    id,
+    followUpId,
+    changes,
+  ) {
+    const response = await fetch(
+      `${API_URL}/leads/${id}/followups/${followUpId}`,
+      {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify(changes),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to update follow-up",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     DELETE FOLLOW-UP
+  ========================= */
+
+  async removeFollowUp(id, followUpId) {
+    const response = await fetch(
+      `${API_URL}/leads/${id}/followups/${followUpId}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to delete follow-up",
+      );
+    }
+
+    return mapLead(data.lead);
+  },
+
+  /* =========================
+     NOTIFICATIONS
+  ========================= */
+
+  notifications() {
+    return [];
+  },
+
+  markNotification() {
+    return true;
+  },
+
+  markAllNotifications() {
+    return true;
+  },
+};
+
+export default demoService;
